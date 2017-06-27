@@ -57,6 +57,15 @@
         <div class="targets"></div>
         <span class="expander">...</span>
       </div>
+      <div class="schedule" data-edit="false">
+        <input type="button" i18n-value="scheduleButton" data-cmd="schedule">
+        <div>
+          <span i18n-text="scheduleFrom"></span>
+          <input type="time">
+          <span i18n-text="scheduleTo"></span>
+          <input type="time">
+        </div>
+      </div>
     </div>
   </template>
 
@@ -218,6 +227,8 @@
 
 <script src="backup/fileSaveLoad.js"></script>
 <script src="msgbox/msgbox.js"></script>
+<script src="/schedule/core.js"></script>
+<script src="/schedule/ui.js"></script>
 
 </body>
 </html>

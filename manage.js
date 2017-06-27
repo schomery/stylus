@@ -140,6 +140,7 @@ function showStyles(styles = []) {
     if (newUI.enabled && newUI.favicons) {
       debounce(handleEvent.loadFavicons, 16);
     }
+    document.dispatchEvent(new Event('styles-ready'));
   }
 }
 
@@ -445,6 +446,10 @@ function handleUpdate(style, {reason, method} = {}) {
     $('.update-note', entry).textContent = t('updateCompleted');
     renderUpdatesOnlyFilter();
   }
+
+  document.dispatchEvent(new CustomEvent('style-edited', {
+    detail: style
+  }));
 }
 
 
