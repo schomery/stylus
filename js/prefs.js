@@ -17,6 +17,10 @@ self.prefs = self.INJECTED === 1 ? self.prefs : (() => {
     // checkbox in style config dialog
     'config.autosave': true,
 
+    'schemeSwitcher.enabled': 'never',
+    'schemeSwitcher.nightStart': '18:00',
+    'schemeSwitcher.nightEnd': '06:00',
+
     'popup.breadcrumbs': true,      // display 'New style' links as URL breadcrumbs
     'popup.breadcrumbs.usePath': false, // use URL path for 'this URL'
     'popup.enabledFirst': true,     // display enabled styles before disabled styles

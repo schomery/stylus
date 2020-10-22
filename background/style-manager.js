@@ -1,6 +1,6 @@
 /* eslint no-eq-null: 0, eqeqeq: [2, "smart"] */
 /* global createCache db calcStyleDigest db tryRegExp styleCodeEmpty styleSectionGlobal
-  getStyleWithNoCode msg prefs sync uuidv4 URLS */
+  getStyleWithNoCode msg prefs sync uuidv4 URLS colorScheme */
 /* exported styleManager */
 'use strict';
 
@@ -64,6 +64,7 @@ const styleManager = (() => {
   const DELETE_IF_NULL = ['id', 'customName'];
 
   handleLivePreviewConnections();
+  handleColorScheme();
 
   return Object.assign({
     compareRevision
@@ -88,6 +89,16 @@ const styleManager = (() => {
     addInclusion,
     removeInclusion
   }));
+
+  function handleColorScheme() {
+    colorScheme.onChange(() => {
+      for (const {data} of styles.values()) {
+        if (data.preferScheme === 'dark' || data.preferScheme === 'light') {
+          broadcastStyleUpdated(data, 'colorScheme', undefined, false);
+        }
+      }
+    });
+  }
 
   function handleLivePreviewConnections() {
     chrome.runtime.onConnect.addListener(port => {
@@ -447,6 +458,7 @@ const styleManager = (() => {
       let excluded = false;
       let sloppy = false;
       let sectionMatched = false;
+      let excludedScheme = false;
       const match = urlMatchStyle(query, data);
       // TODO: enable this when the function starts returning false
       // if (match === false) {
@@ -454,6 +466,9 @@ const styleManager = (() => {
       // }
       if (match === 'excluded') {
         excluded = true;
+      }
+      if (match === 'excludedScheme') {
+        excludedScheme = true;
       }
       for (const section of data.sections) {
         if (styleSectionGlobal(section) && styleCodeEmpty(section.code)) {
@@ -472,7 +487,8 @@ const styleManager = (() => {
         result.push({
           data: getStyleWithNoCode(data),
           excluded,
-          sloppy
+          sloppy,
+          excludedScheme
         });
       }
     }
@@ -596,6 +612,9 @@ const styleManager = (() => {
     }
     if (!style.enabled) {
       return 'disabled';
+    }
+    if (!colorScheme.shouldIncludeStyle(style)) {
+      return 'excludedScheme';
     }
     return true;
   }

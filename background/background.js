@@ -1,9 +1,7 @@
 /* global download prefs openURL FIREFOX CHROME
   URLS ignoreChromeError chromeLocal semverCompare
   styleManager msg navigatorUtil workerUtil contentScripts sync
-  findExistingTab activateTab isTabReplaceable getActiveTab
-*/
-
+  findExistingTab activateTab isTabReplaceable getActiveTab colorScheme */
 'use strict';
 
 // eslint-disable-next-line no-var
@@ -91,6 +89,8 @@ window.API_METHODS = Object.assign(window.API_METHODS || {}, {
       .then(() => new Promise(resolve => setTimeout(resolve, 500)))
       .then(() => msg.broadcastExtension({method: 'optionsCustomizeHotkeys'}));
   },
+
+  updateSystemPreferDark: colorScheme.updateSystemPreferDark,
 
   syncStart: sync.start,
   syncStop: sync.stop,

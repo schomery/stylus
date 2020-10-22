@@ -1,7 +1,7 @@
 /* global configDialog hotkeys msg
   getActiveTab CHROME FIREFOX URLS API onDOMready $ $$ prefs
   setupLivePrefs template t $create animateElement
-  tryJSONparse CHROME_HAS_BORDER_BUG */
+  tryJSONparse CHROME_HAS_BORDER_BUG capitalize */
 
 'use strict';
 
@@ -410,13 +410,14 @@ function createStyleElement(style) {
   const styleName = $('.style-name', entry);
   styleName.lastChild.textContent = style.customName || style.name;
   setTimeout(() => {
-    styleName.title = entry.styleMeta.sloppy ?
-      t('styleNotAppliedRegexpProblemTooltip') :
-        styleName.scrollWidth > styleName.clientWidth + 1 ?
-          styleName.textContent : '';
+    styleName.title =
+      entry.styleMeta.sloppy ? t('styleNotAppliedRegexpProblemTooltip') :
+      entry.styleMeta.excludedScheme ? t(`styleNotAppliedScheme${capitalize(entry.styleMeta.preferScheme)}`) :
+      styleName.scrollWidth > styleName.clientWidth + 1 ? styleName.textContent :
+      '';
   });
 
-  entry.classList.toggle('not-applied', style.excluded || style.sloppy);
+  entry.classList.toggle('not-applied', style.excluded || style.sloppy || style.excludedScheme);
   entry.classList.toggle('regexp-partial', style.sloppy);
 
   $('.exclude-by-domain-checkbox', entry).checked = styleExcluded(style, 'domain');
