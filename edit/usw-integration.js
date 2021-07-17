@@ -1,49 +1,39 @@
-/* global $ $create $remove */// dom.js
+/* global $ toggleDataset */// dom.js
 /* global editor */
-
 'use strict';
 
-let uswPort;
+/* exported uswIntegration */
+const uswIntegration = (() => {
+  /** @type chrome.runtime.Port */
+  let port;
 
-function connectToPort() {
-  if (!uswPort) {
-    uswPort = chrome.runtime.connect({name: 'link-style-usw'});
-    uswPort.onDisconnect.addListener(err => {
-      throw err;
-    });
+  return {
+    revokeLinking() {
+      connectPort();
+      port.postMessage({reason: 'revoke', data: editor.style});
+    },
+
+    publishStyle() {
+      connectPort();
+      const sourceCode = editor.getEditors()[0].getValue();
+      const data = Object.assign(editor.style, {sourceCode});
+      port.postMessage({reason: 'publish', data});
+    },
+
+    updateUI(style = editor.style) {
+      const usw = style._usw || {};
+      toggleDataset($('#publish'), 'connected', usw.token);
+      $('#usw-style-name').textContent = usw.name || '';
+      $('#usw-style-descr').textContent = usw.description || '';
+    },
+  };
+
+  function connectPort() {
+    if (!port) {
+      port = chrome.runtime.connect({name: 'link-style-usw'});
+      port.onDisconnect.addListener(err => {
+        throw err;
+      });
+    }
   }
-}
-
-
-/* exported revokeLinking */
-function revokeLinking() {
-  connectToPort();
-
-  uswPort.postMessage({reason: 'revoke', data: editor.style});
-}
-
-/* exported publishStyle */
-function publishStyle() {
-  connectToPort();
-  const data = Object.assign(editor.style, {sourceCode: editor.getEditors()[0].getValue()});
-  uswPort.postMessage({reason: 'publish', data});
-}
-
-
-/* exported updateUI */
-function updateUI(useStyle) {
-  const style = useStyle || editor.style;
-  if (style._usw && style._usw.token) {
-    $('#revoke-link').style = '';
-
-    const linkInformation = $create('div', {id: 'link-info'}, [
-      $create('p', `Style name: ${style._usw.name}`),
-      $create('p', `Description: ${style._usw.description}`),
-    ]);
-    $remove('#link-info');
-    $('#integration').insertBefore(linkInformation, $('#integration').firstChild);
-  } else {
-    $('#revoke-link').style = 'display: none;';
-    $remove('#link-info');
-  }
-}
+})();

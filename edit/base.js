@@ -132,8 +132,7 @@ baseInit.domReady.then(() => {
       document.body.classList.remove('compact-layout', 'fixed-header');
       window.off('scroll', fixedHeader);
     }
-    for (const type of ['options', 'toc', 'lint']) {
-      const el = $(`details[data-pref="editor.${type}.expanded"]`);
+    for (const el of $$('details[data-pref]')) {
       el.open = compact ? false : prefs.get(el.dataset.pref);
     }
   }
