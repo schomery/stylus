@@ -283,28 +283,17 @@ input:invalid {
 }
 #publish:not([data-connected]) #usw-link-info,
 #publish:not([data-connected]) #usw-revoke-link {
-   display: none;
+  display: none;
 }
-#publish:not([data-connected]) #usw-icon {
-  filter: grayscale(1);
-}
-#usw-icon {
-  width: 20px;
-  height: 20px;
-  vertical-align: bottom;
-}
-#usw-link-info tr {
-  font-size: small;
-  text-align: left;
-}
-#usw-link-info td {
-  overflow-wrap: anywhere;
-}
-#usw-link-info th {
-  font-weight: normal;
-}
-#usw-link-info th::after {
+#usw-link-info dt::after {
   content: ":"
+}
+#usw-link-info dt,
+#usw-link-info dd {
+  display: inline;
+}
+#usw-link-info dd {
+  margin-left: .5em;
 }
 #usw-style-name {
   font-weight: bold;
