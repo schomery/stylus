@@ -7,7 +7,7 @@
 /* global tabMan */
 /* global usercssMan */
 /* global tokenMan */
-/* global retrieveStyleInformation uploadStyle */// usw-api.js
+/* global uswApi */
 'use strict';
 
 /*
@@ -58,12 +58,19 @@ const styleMan = (() => {
     _rev: () => Date.now(),
     _usw: () => ({}),
   };
+  const RENAMED_PROPS = {
+    _isUswLinked: '_uswLinked', // TODO: remove it before 2022
+  };
   const DELETE_IF_NULL = ['id', 'customName', 'md5Url', 'originalMd5'];
+
+  const USW_ERROR_PREFIX = 'Error:';
+  const USW_STYLE_PROPS = ['_uswLinked', 'tmpSourceCode', 'metadata'];
+
   /** @type {Promise|boolean} will be `true` to avoid wasting a microtask tick on each `await` */
   let ready = init();
 
   chrome.runtime.onConnect.addListener(handleLivePreview);
-  chrome.runtime.onConnect.addListener(handlePublishingUSW);
+  chrome.runtime.onConnect.addListener(handleUswIntegration);
 
   //#endregion
   //#region Exports
@@ -356,7 +363,7 @@ const styleMan = (() => {
     });
   }
 
-  function handlePublishingUSW(port) {
+  function handleUswIntegration(port) {
     if (port.name !== 'link-style-usw') {
       return;
     }
@@ -373,50 +380,41 @@ const styleMan = (() => {
           break;
 
         case 'publish': {
-          if (!style._usw || !style._usw.token) {
-            // Ensures just the style does have the _isUswLinked property as `true`.
-            for (const {style: someStyle} of dataMap.values()) {
-              if (someStyle._id === style._id) {
-                someStyle._isUswLinked = true;
-                someStyle.tmpSourceCode = style.sourceCode;
-                let metadata = {};
-                try {
-                  const {metadata: tmpMetadata} = await API.worker.parseUsercssMeta(style.sourceCode);
-                  metadata = tmpMetadata;
-                } catch (err) {
-                  console.log(err);
-                }
-                someStyle.metadata = metadata;
-              } else {
-                delete someStyle._isUswLinked;
-                delete someStyle.tmpSourceCode;
-                delete someStyle.metadata;
-              }
-              handleSave(await saveStyle(someStyle), {broadcast: false});
-            }
-            style._usw = {
-              token: await tokenMan.getToken('userstylesworld', true, style.id),
-            };
-
-            delete style._isUswLinked;
-            delete style.tmpSourceCode;
-            delete style.metadata;
-            for (const [k, v] of Object.entries(await retrieveStyleInformation(style._usw.token))) {
-              style._usw[k] = v;
-            }
-            handleSave(await saveStyle(style), {reason: 'success-publishing', codeIsUpdated: true});
-          }
-
-          const returnResult = await uploadStyle(style);
-          // USw prefix errors with `Error:`.
-          if (returnResult.startsWith('Error:')) {
-            style._usw.publishingError = returnResult;
-            handleSave(await saveStyle(style), {reason: 'publishing-failed', codeIsUpdated: true});
-          }
+          handleUswPublish(style);
           break;
         }
       }
     });
+  }
+
+  async function handleUswPublish(style) {
+    if (!style._usw || !style._usw.token) {
+      const {sourceCode} = style;
+      // Ensures just the style does have the _uswLinked property as `true`.
+      for (const {style: someStyle} of dataMap.values()) {
+        if (someStyle._id === style._id) {
+          someStyle._uswLinked = true;
+          someStyle.tmpSourceCode = sourceCode;
+          someStyle.metadata = await API.worker.parseUsercssMeta(sourceCode).catch(console.log) || {};
+        } else if (USW_STYLE_PROPS.some(p => p in someStyle)) {
+          USW_STYLE_PROPS.forEach(p => delete someStyle[p]);
+        } else {
+          continue;
+        }
+        handleSave(await saveStyle(someStyle), {broadcast: false});
+      }
+      style._usw = {
+        token: await tokenMan.getToken('userstylesworld', true, style.id),
+      };
+      USW_STYLE_PROPS.forEach(p => delete style[p]);
+      Object.assign(style._usw, await uswApi.fetchStyleInfo(style._usw.token));
+      handleSave(await saveStyle(style), {reason: 'success-publishing', codeIsUpdated: true});
+    }
+    const res = await uswApi.uploadStyle(style);
+    if (res.startsWith(USW_ERROR_PREFIX)) {
+      style._usw.publishingError = res.slice(USW_ERROR_PREFIX.length).trim();
+      handleSave(await saveStyle(style), {reason: 'publishing-failed', codeIsUpdated: true});
+    }
   }
 
   async function addIncludeExclude(type, id, rule) {
@@ -532,9 +530,7 @@ const styleMan = (() => {
 
   async function init() {
     const styles = await db.exec('getAll') || [];
-    const updated = styles.filter(style =>
-      addMissingProps(style) +
-      addCustomName(style));
+    const updated = styles.filter(fixOldStyleProps);
     if (updated.length) {
       await db.exec('putMany', updated);
     }
@@ -547,7 +543,7 @@ const styleMan = (() => {
     bgReady._resolveStyles();
   }
 
-  function addMissingProps(style) {
+  function fixOldStyleProps(style) {
     let res = 0;
     for (const key in MISSING_PROPS) {
       if (!style[key]) {
@@ -555,20 +551,22 @@ const styleMan = (() => {
         res = 1;
       }
     }
-    return res;
-  }
-
-  /** Upgrades the old way of customizing local names */
-  function addCustomName(style) {
-    let res = 0;
+    for (const [key, newKey] of Object.entries(RENAMED_PROPS)) {
+      if (key in style) {
+        if (!(newKey in style)) style[newKey] = style[key];
+        delete style[key];
+        res = 1;
+      }
+    }
+    /* Upgrade the old way of customizing local names */
     const {originalName} = style;
     if (originalName) {
-      res = 1;
       if (originalName !== style.name) {
         style.customName = style.name;
         style.name = originalName;
       }
       delete style.originalName;
+      res = 1;
     }
     return res;
   }

@@ -277,6 +277,28 @@ input:invalid {
 #lint:not([open]) h2 {
   margin-bottom: 0;
 }
+
+#publish > div > * {
+  margin-top: .75em;
+}
+#publish:not([data-connected]) #usw-link-info,
+#publish:not([data-connected]) #usw-revoke-link {
+  display: none;
+}
+#usw-link-info dt::after {
+  content: ":"
+}
+#usw-link-info dt,
+#usw-link-info dd {
+  display: inline;
+}
+#usw-link-info dd {
+  margin-left: .5em;
+}
+#usw-style-name {
+  font-weight: bold;
+}
+
 /* options */
 #options [type="number"] {
   width: 3.5em;
@@ -1019,7 +1041,7 @@ body.linter-disabled .hidden-unless-compact {
     flex-wrap: wrap;
     padding-bottom: .25rem;
   }
-  #options {
+  #options[open] {
     width: 100%;
   }
   #sections-list[open] {
@@ -1031,7 +1053,7 @@ body.linter-disabled .hidden-unless-compact {
   }
   #sections-list,
   #lint {
-    width: 50%;
+    max-width: 50%;
   }
   .options-column {
     flex-grow: 1;

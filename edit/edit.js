@@ -11,7 +11,7 @@
 /* global linterMan */
 /* global prefs */
 /* global t */// localization.js
-/* global updateUI revokeLinking publishStyle */// usw-integration.js
+/* global uswIntegration */
 'use strict';
 
 //#region init
@@ -19,7 +19,7 @@
 baseInit.ready.then(async () => {
   await waitForSheet();
   (editor.isUsercss ? SourceEditor : SectionsEditor)();
-  updateUI();
+  uswIntegration.updateUI();
   await editor.ready;
   editor.ready = true;
   editor.dirty.onChange(editor.updateDirty);
@@ -44,45 +44,58 @@ baseInit.ready.then(async () => {
     require(['/edit/linter-dialogs'], () => linterMan.showLintConfig());
   $('#lint-help').onclick = () =>
     require(['/edit/linter-dialogs'], () => linterMan.showLintHelp());
-  $('#revoke-link').onclick = () => revokeLinking();
-  $('#publish-style').onclick = () => publishStyle();
+  $('#usw-publish-style').onclick = () => uswIntegration.publishStyle();
+  $('#usw-revoke-link').onclick = () => uswIntegration.revokeLinking();
   require([
     '/edit/autocomplete',
     '/edit/global-search',
   ]);
 });
 
-msg.onExtension(request => {
-  const {style} = request;
-  switch (request.method) {
-    case 'styleUpdated':
-      if (editor.style.id === style.id) {
-        if (!['editPreview', 'editPreviewEnd', 'editSave', 'config'].includes(request.reason)) {
-          Promise.resolve(request.codeIsUpdated === false ? style : API.styles.get(style.id))
-            .then(newStyle => {
-              editor.replaceStyle(newStyle, request.codeIsUpdated);
+//#endregion
+//#region events
 
-              if (['success-publishing', 'success-revoke'].includes(request.reason)) {
-                updateUI(newStyle);
-              }
-              if (request.reason === 'publishing-failed') {
-                messageBoxProxy.alert(newStyle._usw.publishingError, 'pre',
-                  'UserStyles.world: ' + t('genericError'));
-              }
-            });
+{
+  const onStyleUpdated = async ({style, reason, codeIsUpdated = true}) => {
+    if (codeIsUpdated) style = await API.styles.get(style.id);
+    editor.replaceStyle(style, codeIsUpdated);
+    switch (reason) {
+      case 'success-publishing':
+      case 'success-revoke':
+        uswIntegration.updateUI(style);
+        break;
+      case 'publishing-failed':
+        messageBoxProxy.alert(style._usw.publishingError, 'pre',
+          'UserStyles.world: ' + t('genericError'));
+        break;
+    }
+  };
+
+  const NO_UPD_REASON = [
+    'editPreview',
+    'editPreviewEnd',
+    'editSave',
+    'config',
+  ];
+
+  msg.onExtension(request => {
+    switch (request.method) {
+      case 'styleUpdated':
+        if (editor.style.id === request.style.id && !NO_UPD_REASON.includes(request.reason)) {
+          onStyleUpdated(request);
         }
-      }
-      break;
-    case 'styleDeleted':
-      if (editor.style.id === style.id) {
-        closeCurrentTab();
-      }
-      break;
-    case 'editDeleteText':
-      document.execCommand('delete');
-      break;
-  }
-});
+        break;
+      case 'styleDeleted':
+        if (editor.style.id === request.style.id) {
+          closeCurrentTab();
+        }
+        break;
+      case 'editDeleteText':
+        document.execCommand('delete');
+        break;
+    }
+  });
+}
 
 window.on('beforeunload', e => {
   let pos;

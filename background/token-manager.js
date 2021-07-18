@@ -92,8 +92,7 @@ const tokenMan = (() => {
       if (!interactive) {
         throw new Error(`Invalid token: ${name}`);
       }
-      const accessToken = authUser(name, k, interactive);
-      return accessToken;
+      return authUser(name, k, interactive);
     },
 
     async revokeToken(name, styleId) {
