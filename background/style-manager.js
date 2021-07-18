@@ -553,7 +553,7 @@ const styleMan = (() => {
     }
     for (const [key, newKey] of Object.entries(RENAMED_PROPS)) {
       if (key in style) {
-        style[newKey] = style[key];
+        if (!(newKey in style)) style[newKey] = style[key];
         delete style[key];
         res = 1;
       }
